@@ -5,7 +5,7 @@ Plugin URI: http://www.superblogme.com/auto-post-scheduler/
 Tags: schedule post, schedule, auto post
 Tested up to: 3.9.2
 Requires at least:
-Stable tag: 1.1
+Stable Tag: 1.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
