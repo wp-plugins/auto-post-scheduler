@@ -3,17 +3,16 @@
  * Plugin Name: Auto Post Scheduler
  * Plugin URI: http://www.superblogme.com/auto-post-scheduler/
  * Description: Publishes drafts or recycles old posts based on a set schedule 
- * Version: 1.0
- * Released: May 21st, 2014
+ * Version: 1.1
+ * Released: TBD
  * Author: Super Blog Me
  * Author URI: http://www.superblogme.com
  * License: GPL2
  **/
 
-if ( !function_exists( 'add_action' ) ) {
-        echo "Oops! This is a WordPress plugin and should not be called directly.\n";
-        exit;
-}
+define('AUTOPOSTSCHEDULER_VERSION', '1.1');
+
+defined('ABSPATH') or die ("Oops! This is a WordPress plugin and should not be called directly.\n");
 
 register_activation_hook( __FILE__, 'aps_activation' );
 register_deactivation_hook( __FILE__, 'aps_deactivation' );
@@ -21,12 +20,11 @@ register_deactivation_hook( __FILE__, 'aps_deactivation' );
 add_action('admin_menu', 'aps_add_options');
 add_action('aps_auto_post_hook', 'aps_auto_post');
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function aps_add_options() {
         if (function_exists('add_options_page')) {
-                add_options_page('Auto Post Scheduler Options', 'Auto Post Scheduler', 'manage_options', __FILE__, 'aps_options_page');
+                add_options_page('Auto Post Scheduler Options', 'Auto Post Scheduler', 'manage_options', 'auto-post-scheduler', 'aps_options_page');
         }
 }
 
@@ -42,6 +40,7 @@ function aps_activation() {
 	add_option('aps_recycle', FALSE);
 	add_option('aps_batch', 1);
 	add_option('aps_logfile', plugin_dir_path( __FILE__ ) . 'auto-post-scheduler.log');
+	add_option('aps_post_types', 'post');
 }
 
 function aps_deactivation() {
@@ -53,8 +52,6 @@ function aps_deactivation() {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function aps_options_page() {
-
-$aps_version = '1.0';
 
         if (isset($_POST['enable_auto_post_scheduler'])) {
 
@@ -101,6 +98,7 @@ $aps_version = '1.0';
                 update_option('aps_recycle', isset($_POST['aps_recycle']) ? TRUE : FALSE);
                 update_option('aps_batch', (int)$_POST['aps_batch']);
                 update_option('aps_logfile', stripslashes((string)$_POST['aps_logfile']));
+                update_option('aps_post_types', stripslashes((string)$_POST['aps_post_types']));
 
 		// new options so reset the callback
                 wp_clear_scheduled_hook('aps_auto_post_hook');
@@ -131,7 +129,7 @@ $aps_version = '1.0';
 
         <div class='wrap'>
 
-        <h2>Auto Post Scheduler v<?php echo $aps_version; ?></h2>
+        <h2>Auto Post Scheduler v<?php echo AUTOPOSTSCHEDULER_VERSION; ?></h2>
         <form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
 
         <div style="padding: 0 0 20px 40px;">
@@ -202,6 +200,14 @@ $aps_version = '1.0';
         </td></tr>
 
         <tr valign="top"><td width="25%" align="right">
+                <strong>Limit to Post Type(s)</strong>
+        </td><td align="left">
+                <input name="aps_post_types" type="text" size="10" value="<?php echo htmlspecialchars(get_option('aps_post_types')); ?>"/>
+                <br />Separate post types with commas
+                <br />If left blank, the plugin will only check for the default 'post' type
+        </td></tr>
+
+        <tr valign="top"><td width="25%" align="right">
                 <strong>Limit to Category ID(s)</strong>
         </td><td align="left">
                 <input name="aps_cats" type="text" size="10" value="<?php echo htmlspecialchars(get_option('aps_cats')); ?>"/>
@@ -252,7 +258,8 @@ $aps_version = '1.0';
 
         </form>
 
-        <P>
+
+        <p/>
         <h2>Auto Post Scheduler log</h2>
         <p><code>
 		<?php aps_show_log(); ?>
@@ -296,11 +303,15 @@ function aps_auto_post() {
 	$aps_batch = get_option('aps_batch');
 	$aps_random = (bool)get_option('aps_random');
 	$aps_recycle = (bool)get_option('aps_recycle');
+	$aps_post_types = get_option('aps_post_types');
 
 	// set up the basic post query
+	$post_types = explode(',', $aps_post_types);
+
 	$args = array(
 		'numberposts' => $aps_batch,
 		'category' => $aps_cats,
+		'post_type' => $post_types
 	);
 
         if ($aps_drafts == TRUE)  {
@@ -326,11 +337,13 @@ function aps_auto_post() {
 			$update['post_status'] = 'publish';
 			$thetime = date("Y-m-d H:i:s");
 			$update['post_date'] = $thetime;
+			kses_remove_filters();
 			wp_update_post($update);
+			kses_init_filters();
 			if ($args['post_status'] == "draft")
-				aps_write_log("DRAFT id " . $thepost->ID . " PUBLISHED: '" . $thepost->post_title . "'\n");
+				aps_write_log($thepost->post_type . " DRAFT id " . $thepost->ID . " PUBLISHED: '" . $thepost->post_title . "'\n");
 			else
-				aps_write_log("POST id " . $thepost->ID . " RECYCLED: '" . $thepost->post_title . "'\n");
+				aps_write_log($thepost->post_type . " id " . $thepost->ID . " RECYCLED: '" . $thepost->post_title . "'\n");
 		}
 	}
 	else {
@@ -367,4 +380,22 @@ function aps_show_log() {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+add_filter('plugin_action_links', 'aps_plugin_action_links', 10, 2);
+
+function aps_plugin_action_links($links, $file) {
+    static $this_plugin;
+
+    if (!$this_plugin) {
+        $this_plugin = plugin_basename(__FILE__);
+    }
+
+    if ($file == $this_plugin) {
+        $settings_link = '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=auto-post-scheduler">Settings</a>';
+        array_unshift($links, $settings_link);
+    }
+
+    return $links;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ?>
