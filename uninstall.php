@@ -16,4 +16,5 @@ if( ! defined( 'WP_UNINSTALL_PLUGIN' ) )
         delete_option('aps_recycle');
         delete_option('aps_batch');
         delete_option('aps_logfile');
+        delete_option('aps_post_types');
 ?>
