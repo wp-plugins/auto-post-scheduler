@@ -6,8 +6,7 @@ Donate Link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: schedule post, schedule, auto post, drafts, scheduling, posts, queue,
 queue posts
 Tested up to: 4.0
-Requires at least:
-Stable Tag: 1.2
+Stable Tag: 1.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -43,12 +42,19 @@ auto post checks.
 of your WordPress site itself as the wp-cron uses that IP address.
 
 
+
 == Screenshots ==
 
 1. The admin options.
 
 
 == Changelog ==
+
+= 1.3 =
+
+* Will now set post time based on the timezone in Settings->General. Default UTC.
+* Added ability to limit post checks to certain days of the week and time ranges.
+
 
 = 1.2 =
 
@@ -60,10 +66,8 @@ of your WordPress site itself as the wp-cron uses that IP address.
 = 1.1 =
 
 * Added support for custom post types.
-
 * Bypass kses filter check during wp_update_post() to avoid WordPress
 * automatically stripping embed codes such as Youtube iframes.
-
 * Added 'Settings' shortcut link under Admin->Plugins->Auto Post Scheduler
 
 

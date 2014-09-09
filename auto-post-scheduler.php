@@ -3,21 +3,21 @@
  * Plugin Name: Auto Post Scheduler
  * Plugin URI: http://www.superblogme.com/auto-post-scheduler/
  * Description: Publishes drafts or recycles old posts based on a set schedule 
- * Version: 1.2
- * Released: August 19th, 2014
+ * Version: 1.3
+ * Released: September 9th, 2014
  * Author: Super Blog Me
  * Author URI: http://www.superblogme.com
  * License: GPL2
  **/
 
-define('AUTOPOSTSCHEDULER_VERSION', '1.2');
+define('AUTOPOSTSCHEDULER_VERSION', '1.3');
 
 defined('ABSPATH') or die ("Oops! This is a WordPress plugin and should not be called directly.\n");
 
 register_activation_hook( __FILE__, 'aps_activation' );
 register_deactivation_hook( __FILE__, 'aps_deactivation' );
 
-add_action( 'admin_init', 'aps_admin_init' );
+add_action('admin_init', 'aps_admin_init' );
 add_action('admin_menu', 'aps_add_options');
 add_action('aps_auto_post_hook', 'aps_auto_post');
 
@@ -30,8 +30,8 @@ function aps_admin_init() {
 function aps_add_options() {
         if (function_exists('add_options_page')) {
                 $page = add_options_page('Auto Post Scheduler Options', 'Auto Post Scheduler', 'manage_options', 'auto-post-scheduler', 'aps_options_page');
+		add_action( 'admin_print_styles-' . $page, 'aps_options_styles' );
         }
-	add_action( 'admin_print_styles-' . $page, 'aps_options_styles' );
 }
 
 function aps_options_styles() {
@@ -51,6 +51,8 @@ function aps_activation() {
 	add_option('aps_batch', 1);
 	add_option('aps_logfile', plugin_dir_path( __FILE__ ) . 'auto-post-scheduler.log');
 	add_option('aps_post_types', 'post');
+	add_option('aps_days', '');
+	add_option('aps_hours', '');
 }
 
 function aps_deactivation() {
@@ -114,6 +116,8 @@ function aps_options_page() {
                 update_option('aps_batch', (int)$_POST['aps_batch']);
                 update_option('aps_logfile', stripslashes((string)$_POST['aps_logfile']));
                 update_option('aps_post_types', stripslashes((string)$_POST['aps_post_types']));
+                update_option('aps_days', stripslashes((string)$_POST['aps_days']));
+                update_option('aps_hours', stripslashes((string)$_POST['aps_hours']));
 
 		// new options so reset the callback
                 wp_clear_scheduled_hook('aps_auto_post_hook');
@@ -147,7 +151,7 @@ function aps_options_page() {
         <h2>Auto Post Scheduler v<?php echo AUTOPOSTSCHEDULER_VERSION; ?></h2>
 	<a target='_blank' href="http://wordpress.org/support/plugin/auto-post-scheduler" class="ibutton btnblack">Support Forum</a>
 	<a target='_blank' href="http://wordpress.org/support/view/plugin-reviews/auto-post-scheduler#postform" class="ibutton btnblack">Leave a review</a>
-	<a target='_blank' href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W4W9RA2Q6TAGQ" class="ibutton btnblack">Donations</a>
+	<a target='_blank' href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W4W9RA2Q6TAGQ" class="ibutton btnblack">Buy me a Beer</a>
 
         <form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
 
@@ -163,7 +167,10 @@ function aps_options_page() {
         	foreach ($cronhooks as $hook => $cronjobs) :
         		foreach ($cronjobs as $cronjob) :
 				if ($schedule[$cronjob['schedule']]['display'] == "Auto Post Scheduler Check") {
-					echo "Next auto post check: " . date('Y-m-d h:i:s e', $timestamp) . "<p/>";
+					echo "&nbsp; &nbsp;Current server time: " . date('Y-m-d h:i:s',current_time("timestamp")) . " " . get_option('timezone_string');
+					echo "<br/>Next auto post check: " . date('Y-m-d h:i:s', $timestamp + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) . " " . get_option('timezone_string');
+					echo "<p/>";
+					break;
 				}
 			endforeach;
 		endforeach;
@@ -221,7 +228,7 @@ function aps_options_page() {
         <tr valign="top"><td width="25%" align="right">
                 <strong>Limit to Post Type(s)</strong>
         </td><td align="left">
-                <input name="aps_post_types" type="text" size="10" value="<?php echo htmlspecialchars(get_option('aps_post_types')); ?>"/>
+                <input name="aps_post_types" type="text" size="20" value="<?php echo htmlspecialchars(get_option('aps_post_types')); ?>"/>
                 <br />Separate post types with commas
                 <br />If left blank, the plugin will only check for the default 'post' type
         </td></tr>
@@ -229,9 +236,21 @@ function aps_options_page() {
         <tr valign="top"><td width="25%" align="right">
                 <strong>Limit to Category ID(s)</strong>
         </td><td align="left">
-                <input name="aps_cats" type="text" size="10" value="<?php echo htmlspecialchars(get_option('aps_cats')); ?>"/>
+                <input name="aps_cats" type="text" size="20" value="<?php echo htmlspecialchars(get_option('aps_cats')); ?>"/>
                 <br />Separate category IDs with commas
                 <br />If left blank, the plugin will check for posts from all categories
+        </td></tr>
+
+        <tr valign="top"><td width="25%" align="right">
+                <strong>Limit to certain Day(s)</strong>
+        </td><td align="left">
+                <input name="aps_days" type="text" size="20" value="<?php echo htmlspecialchars(get_option('aps_days')); ?>"/>
+                <strong>&nbsp; &nbsp;Hour(s)</strong>
+                <input name="aps_hours" type="text" size="20" value="<?php echo htmlspecialchars(get_option('aps_hours')); ?>"/>
+		in 24-hour format
+                <br />Separate days with commas. Values: Mon, Tue, Wed, Thu, Fri, Sat, Sun
+                <br />Separate hours with dashes and commas. Example: 0400-1230, 1500-2100
+                <br />If left blank, all times are considered
         </td></tr>
 
         <tr valign="top"><td width="25%" align="right">
@@ -312,6 +331,31 @@ add_filter('cron_schedules', 'aps_set_next_schedule');
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+function aps_time_check() { // check if there are day/hour limits
+	$aps_days = get_option('aps_days');
+	$aps_hours = get_option('aps_hours');
+
+	if (!empty($aps_days) || !empty($aps_hours)) {
+		$today = date("D",current_time("timestamp"));
+
+		if (!empty($aps_days) && stripos($aps_days,$today) === false) {
+			return 0;
+		}
+		else if (!empty($aps_hours)) {
+			$time = date("Hi",current_time("timestamp"));
+			$ranges = explode(",",$aps_hours);
+			foreach($ranges as $range) {
+				$hours = explode("-",$range);
+				if ($hours[0] <= $time && $time <= $hours[1]) return 1;
+			}
+			return 0;
+		}
+	}
+return 1;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 function aps_auto_post() {
 
 	$aps_enabled = (bool)get_option('aps_enabled');
@@ -323,6 +367,8 @@ function aps_auto_post() {
 	$aps_random = (bool)get_option('aps_random');
 	$aps_recycle = (bool)get_option('aps_recycle');
 	$aps_post_types = get_option('aps_post_types');
+
+	if (!aps_time_check()) return;
 
 	// set up the basic post query
 	$post_types = explode(',', $aps_post_types);
@@ -354,8 +400,8 @@ function aps_auto_post() {
 			$update = array();
 			$update['ID'] = $thepost->ID;
 			$update['post_status'] = 'publish';
-			$thetime = date("Y-m-d H:i:s");
-			$update['post_date'] = $thetime;
+			$update['post_date_gmt'] = date('Y-m-d H:i:s',current_time("timestamp",1));
+			$update['post_date'] = get_date_from_gmt($update['post_date_gmt']);
 			kses_remove_filters();
 			wp_update_post($update);
 			kses_init_filters();
@@ -377,7 +423,7 @@ function aps_write_log($msg)
 {
 	$fh=@fopen(get_option('aps_logfile'),"a");
 	if (!$fh) return;
-	fwrite($fh, strftime("%D %T") . "\t - " . $msg);
+	fwrite($fh, strftime("%D %T",current_time("timestamp")) . "\t - " . $msg);
 	fclose($fh);
 }
 
