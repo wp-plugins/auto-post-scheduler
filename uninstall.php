@@ -12,9 +12,20 @@ if( ! defined( 'WP_UNINSTALL_PLUGIN' ) )
         delete_option('aps_delay_time');
         delete_option('aps_cats');
         delete_option('aps_drafts');
+        delete_option('aps_pending');
+        delete_option('aps_publish');
         delete_option('aps_random');
         delete_option('aps_recycle');
         delete_option('aps_batch');
         delete_option('aps_logfile');
         delete_option('aps_post_types');
+        delete_option('aps_days');	// deprecated
+        delete_option('aps_hours');	// deprecated
+        delete_option('aps_hours_mon');
+        delete_option('aps_hours_tue');
+        delete_option('aps_hours_wed');
+        delete_option('aps_hours_thu');
+        delete_option('aps_hours_fri');
+        delete_option('aps_hours_sat');
+        delete_option('aps_hours_sun');
 ?>
