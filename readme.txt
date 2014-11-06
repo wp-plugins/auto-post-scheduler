@@ -65,6 +65,13 @@ and change 'mydomain' to your site domain.
 
 This crontab entry will call wp_cron every 5 minutes.
 
+= When using WP Super Cache the Home/Front page isn't updated when APS
+publishes a post or recycles an old post. Why is that?
+
+As far as I know, WP Super Cache must not hook into when a post status has
+changed. User MassimoD reports "Quick Cache does, W3Total Cache does, Hyper
+Cache does, Gator Cache does. Only WP Super Cache doesn't."
+
 
 
 == Screenshots ==
@@ -83,6 +90,7 @@ This crontab entry will call wp_cron every 5 minutes.
 * Updated feature: Expanded 'Limit Certain Day(s)' to allow different limits for each day.
 * Updated feature: Time display on settings page and log file to use same 24h format.
 * Updated feature: Log messages detail post type.
+* Updated feature: Added Minimum Recycle Age for recycling posts.
 * Internal change: Use WP_Query instead of get_posts for more arg options.
 * Internal change: Moved inline css to css file.
 * Internal change: Use primary buttons instead of custom.
