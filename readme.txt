@@ -3,9 +3,9 @@ Contributors: johnh10
 Plugin Name: Auto Post Scheduler
 Plugin URI: http://www.superblogme.com/auto-post-scheduler/
 Donate Link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W4W9RA2Q6TAGQ
-Tags: schedule post, schedule, auto post, draft, pending, publish, scheduling, posts, queue, post scheduler, automate posts, queue posts, auto publish
+Tags: schedule post, schedule, auto post, draft, pending, publish, scheduling, posts, queue, post scheduler, automate posts, queue posts, auto publish, post
 Tested up to: 4.0
-Stable Tag: 1.4
+Stable Tag: 1.41
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -80,6 +80,10 @@ Cache does, Gator Cache does. Only WP Super Cache doesn't."
 
 
 == Changelog ==
+
+= 1.41 = 
+
+* Bugfix: Limit by category: WP_Query function uses 'cat' arg instead of 'category'
 
 = 1.4 = 
 
