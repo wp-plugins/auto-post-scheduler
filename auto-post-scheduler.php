@@ -4,7 +4,7 @@
  * Plugin URI: http://www.superblogme.com/auto-post-scheduler/
  * Description: Publishes posts or recycles old posts at specified time intervals automatically.
  * Version: 1.5
- * Released: TBD
+ * Released: Dec 30, 2014
  * Author: Super Blog Me
  * Author URI: http://www.superblogme.com
  * License: GPL2
