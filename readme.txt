@@ -45,7 +45,7 @@ cron_schedules =
 
 This happens when another plugin incorrectly replaces cron_schedules with
 their own schedules instead of correctly adding to existing schedules, so the
-other plugin actually removes our aps_auto_hook. Other plugin code need to be fixed.
+other plugin actually removes our aps_auto_hook. Other plugin code needs to be fixed.
 
 = How do I turn off WP_Cron and use server cron jobs instead?
 
@@ -80,6 +80,12 @@ Cache does, Gator Cache does. Only WP Super Cache doesn't."
 
 
 == Changelog ==
+
+= 1.42 = 
+
+* Added i18n support.
+* Changed priority of 'cron_schedules' add_filter call to 99.
+* If no 'Eligible Post Statuses?' selected, default is 'publish'.
 
 = 1.41 = 
 
