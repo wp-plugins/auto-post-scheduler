@@ -5,7 +5,7 @@ Plugin URI: http://www.superblogme.com/auto-post-scheduler/
 Donate Link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W4W9RA2Q6TAGQ
 Tags: schedule post, schedule, auto post, draft, pending, publish, scheduling, posts, queue, post scheduler, automate posts, queue posts, auto publish, post
 Tested up to: 4.1
-Stable Tag: 1.60
+Stable Tag: 1.61
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -81,9 +81,14 @@ Cache does, Gator Cache does. Only WP Super Cache doesn't."
 
 == Changelog ==
 
+= 1.61
+
+* If limit day is set to 0 no posts will be published that day.
+
 = 1.60 = 
 
 * SVN version change only. WP was using v1.5 instead of 1.50 so no updates.
+
 
 = 1.50 = 
 
