@@ -81,7 +81,7 @@ Cache does, Gator Cache does. Only WP Super Cache doesn't."
 
 == Changelog ==
 
-= 1.5 = 
+= 1.50 = 
 
 * Will detect missing aps_auto_post_hook event and re-add if somehow removed by another plugin.
 * Added i18n support. Google Translation for: Spanish.
