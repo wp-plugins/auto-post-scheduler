@@ -3,8 +3,8 @@
  * Plugin Name: Auto Post Scheduler
  * Plugin URI: http://www.superblogme.com/auto-post-scheduler/
  * Description: Publishes posts or recycles old posts at specified time intervals automatically.
- * Version: 1.50
- * Released: Dec 30, 2014
+ * Version: 1.60
+ * Released: Dec 31, 2014
  * Author: Super Blog Me
  * Author URI: http://www.superblogme.com
  * License: GPL2
@@ -12,7 +12,7 @@
  * Domain Path: /lang
  **/
 
-define('AUTOPOSTSCHEDULER_VERSION', '1.50');
+define('AUTOPOSTSCHEDULER_VERSION', '1.60');
 
 defined('ABSPATH') or die ("Oops! This is a WordPress plugin and should not be called directly.\n");
 
