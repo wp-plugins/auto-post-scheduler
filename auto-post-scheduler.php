@@ -3,8 +3,8 @@
  * Plugin Name: Auto Post Scheduler
  * Plugin URI: http://www.superblogme.com/auto-post-scheduler/
  * Description: Publishes posts or recycles old posts at specified time intervals automatically.
- * Version: 1.61
- * Released: Dec 31, 2014
+ * Version: 1.62
+ * Released: Jan 1, 2014
  * Author: Super Blog Me
  * Author URI: http://www.superblogme.com
  * License: GPL2
@@ -12,7 +12,7 @@
  * Domain Path: /lang
  **/
 
-define('AUTOPOSTSCHEDULER_VERSION', '1.61');
+define('AUTOPOSTSCHEDULER_VERSION', '1.62');
 
 defined('ABSPATH') or die ("Oops! This is a WordPress plugin and should not be called directly.\n");
 
@@ -119,7 +119,6 @@ function aps_options_page() {
                 $str = __("Auto Post Scheduler Disabled!", 'auto-post-scheduler' );
                 echo $str;
 		aps_write_log( $str );
-aps_write_log( print_r(wp_get_schedules(), TRUE) );
 
             ?></strong></p></div><?php
 
@@ -430,7 +429,7 @@ function aps_time_check() { // check if there are day/hour limits
 	$today = strtolower(date("D",current_time("timestamp")));
 	$aps_hours = get_option('aps_hours_' . $today);
 
-	if ($aps_hours == 0)	// 0 = no posts for this day
+	if ($aps_hours == '0')	// 0 = no posts for this day
 		return 0;
 	if (!empty($aps_hours)) {
 		$time = date("Hi",current_time("timestamp"));
