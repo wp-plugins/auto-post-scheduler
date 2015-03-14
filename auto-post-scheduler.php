@@ -74,7 +74,7 @@ function aps_activation() {
 	add_option('aps_excludes', '');
 	add_option('aps_max_per_day', '0');
 	add_option('aps_num_day', '0,0');
-	add_option('aps_restart', 'FALSE');
+	add_option('aps_restart', FALSE);
 }
 
 function aps_deactivation() {
