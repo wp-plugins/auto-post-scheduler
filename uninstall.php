@@ -34,5 +34,6 @@ if( ! defined( 'WP_UNINSTALL_PLUGIN' ) )
         delete_option('aps_excludes');
         delete_option('aps_max_per_day');
         delete_option('aps_num_day');
+        delete_option('aps_restart');
         delete_option('aps_updating');
 ?>
