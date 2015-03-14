@@ -16,6 +16,8 @@ if( ! defined( 'WP_UNINSTALL_PLUGIN' ) )
         delete_option('aps_publish');
         delete_option('aps_random');
         delete_option('aps_recycle');
+        delete_option('aps_recycle_min');
+        delete_option('aps_recycle_min_time');
         delete_option('aps_batch');
         delete_option('aps_logfile');
         delete_option('aps_post_types');
@@ -28,4 +30,10 @@ if( ! defined( 'WP_UNINSTALL_PLUGIN' ) )
         delete_option('aps_hours_fri');
         delete_option('aps_hours_sat');
         delete_option('aps_hours_sun');
+        delete_option('aps_debug');
+        delete_option('aps_excludes');
+        delete_option('aps_max_per_day');
+        delete_option('aps_num_day');
+        delete_option('aps_restart');
+        delete_option('aps_updating');
 ?>
