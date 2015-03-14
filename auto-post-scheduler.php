@@ -4,7 +4,7 @@
  * Plugin URI: http://www.superblogme.com/auto-post-scheduler/
  * Description: Publishes posts or recycles old posts at specified time intervals automatically.
  * Version: 1.63
- * Released: TBD
+ * Released: March 14th, 2015
  * Author: Super Blog Me
  * Author URI: http://www.superblogme.com
  * License: GPL2
@@ -71,6 +71,10 @@ function aps_activation() {
 	add_option('aps_hours_sat', '');
 	add_option('aps_hours_sun', '');
 	add_option('aps_debug', 'FALSE');
+	add_option('aps_excludes', '');
+	add_option('aps_max_per_day', '0');
+	add_option('aps_num_day', '0,0');
+	add_option('aps_restart', 'FALSE');
 }
 
 function aps_deactivation() {
@@ -78,6 +82,18 @@ function aps_deactivation() {
         update_option('aps_enabled', FALSE);
 }
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function aps_restart_event() {
+	wp_clear_scheduled_hook('aps_auto_post_hook');
+	$timesecs = aps_time_seconds(get_option('aps_next'),get_option('aps_next_time'));
+	if ( wp_schedule_event( time() + $timesecs, 'aps_schedule', 'aps_auto_post_hook' ) !== FALSE )
+		$str = __("Post published outside of APS - Auto Post Scheduler restarted", 'auto-post-scheduler' );
+	else
+		$str = __("Error with wp_schedule_event for aps_auto_post_hook!!", 'auto-post-scheduler' );
+	return $str;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -128,11 +144,11 @@ function aps_options_page() {
                 ?><div id="message" class="updated fade"><p><strong><?php
 
 		if ($_POST['aps_next'] != get_option('aps_next'))
-			$aps_restart = 1;
+			$new_schedule = 1;
 		else if ($_POST['aps_next_time'] != get_option('aps_next_time'))
-			$aps_restart = 1;
+			$new_schedule = 1;
 		else
-			$aps_restart = 0;
+			$new_schedule = 0;
 
 		$sn = $_POST['aps_next'];
 		if ((int)$sn <= 0) $sn = 24;	// if improperly set, put back to default 24
@@ -159,9 +175,12 @@ function aps_options_page() {
                 update_option('aps_hours_fri', stripslashes((string)$_POST['aps_hours_fri']));
                 update_option('aps_hours_sat', stripslashes((string)$_POST['aps_hours_sat']));
                 update_option('aps_hours_sun', stripslashes((string)$_POST['aps_hours_sun']));
+                update_option('aps_excludes', stripslashes((string)$_POST['aps_excludes']));
                 update_option('aps_debug', isset($_POST['aps_debug']) ? TRUE : FALSE);
+                update_option('aps_max_per_day', (int)$_POST['aps_max_per_day']);
+                update_option('aps_restart', isset($_POST['aps_restart']) ? TRUE : FALSE);
 
-                if (get_option('aps_enabled') == TRUE && $aps_restart) {
+                if (get_option('aps_enabled') == TRUE && $new_schedule) {
                 	$str = __( "Options Saved! New Auto Post Schedule time will be used after next auto post check.", 'auto-post-scheduler' );
                 	echo $str;
                 	aps_write_log( $str );
@@ -194,7 +213,7 @@ function aps_options_page() {
 	&nbsp; &nbsp; &nbsp;
 	<a target='_blank' href="http://wordpress.org/support/plugin/auto-post-scheduler" class="button-primary"><?php _e('Support Forum', 'auto-post-scheduler' ); ?></a>
 	<a target='_blank' href="http://wordpress.org/support/view/plugin-reviews/auto-post-scheduler#postform" class="button-primary"><?php _e( 'Leave a review', 'auto-post-scheduler' ); ?></a>
-	<a target='_blank' href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W4W9RA2Q6TAGQ" class="button-primary"><?php _e( 'Instant Karma $1', 'auto-post-scheduler' ); ?></a>
+	<a target='_blank' href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W4W9RA2Q6TAGQ" class="button-primary"><?php _e( 'Instant Karma only $1', 'auto-post-scheduler' ); ?></a>
 
         <form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
 
@@ -248,6 +267,12 @@ function aps_options_page() {
         </td></tr>
 
         <tr valign="top"><td width="25%" align="right">
+                <strong><?php _e('Restart on Publish?', 'auto-post-scheduler' );?></strong>
+        </td><td align="left">
+                <input type="checkbox" name="aps_restart" value="checkbox" <?php if (get_option('aps_restart')) echo "checked='checked'"; ?>/> <?php _e('If checked, posts published manually or by other plugins will reset the scheduler.', 'auto-post-scheduler' );?> 
+        </td></tr>
+
+        <tr valign="top"><td width="25%" align="right">
                 <strong><?php _e('Start Scheduling Delay', 'auto-post-scheduler' );?></strong>
         </td><td align="left">
                 <input name="aps_start_delay" type="text" size="10" value="<?php echo htmlspecialchars(get_option('aps_start_delay')); ?>"/>
@@ -268,20 +293,20 @@ function aps_options_page() {
         </td><td align="left">
                 <input name="aps_post_types" type="text" size="20" value="<?php echo htmlspecialchars(get_option('aps_post_types')); ?>"/>
                 <br /><?php _e('Separate post types with commas', 'auto-post-scheduler' );?>
-                <br /><?php _e("If left blank, the plugin will only check for the default 'post' type", 'auto-post-scheduler' );?>
+                <br /><?php _e("If left blank, the plugin will only check for the default 'post' type.", 'auto-post-scheduler' );?>
         </td></tr>
 
         <tr valign="top"><td width="25%" align="right">
                 <strong><?php _e('Limit to Category ID(s)', 'auto-post-scheduler' );?></strong>
         </td><td align="left">
                 <input name="aps_cats" type="text" size="20" value="<?php echo htmlspecialchars(get_option('aps_cats')); ?>"/>
-                <br /><?php _e('Separate category IDs with commas', 'auto-post-scheduler' );?>
+                <br /><?php _e('Separate category IDs with commas.', 'auto-post-scheduler' );?>
                 <br /><?php _e('Exclude categories by prefixing its id with a \'-\' sign.', 'auto-post-scheduler' );?>
-                <br /><?php _e('If left blank, the plugin will check for posts from all categories', 'auto-post-scheduler' );?>
+                <br /><?php _e('If left blank, the plugin will check for posts from all categories.', 'auto-post-scheduler' );?>
         </td></tr>
 
         <tr valign="top"><td width="25%" align="right">
-                <strong><?php _e('Limit certain Day(s)', 'auto-post-scheduler' );?></strong>
+                <strong><?php _e('Limit certain Day(s) to', 'auto-post-scheduler' );?></strong>
         </td><td align="left">
 		<div class='aps-limitday'><strong><em><?php _e('Mondays', 'auto-post-scheduler' );?></em></strong></div><?php _e('Time range(s)', 'auto-post-scheduler' );?>
                 <input name="aps_hours_mon" type="text" size="20" value="<?php echo htmlspecialchars(get_option('aps_hours_mon')); ?>"/> <?php _e('in 24-hour format', 'auto-post-scheduler' );?>
@@ -303,8 +328,15 @@ function aps_options_page() {
 		<br />
 		<div class='aps-limitday'><strong><em><?php _e('Sundays', 'auto-post-scheduler' );?></em></strong></div><?php _e('Time range(s)', 'auto-post-scheduler' );?>
                 <input name="aps_hours_sun" type="text" size="20" value="<?php echo htmlspecialchars(get_option('aps_hours_sun')); ?>"/> <?php _e('in 24-hour format', 'auto-post-scheduler' );?>
-                <br /><?php _e('Separate hours with dashes and commas. Example: 0400-1230, 1500-2100', 'auto-post-scheduler' );?>
-                <br /><?php _e('If left blank, all times are considered', 'auto-post-scheduler' );?>
+                <br /><?php _e('Separate allowed hours with dashes and commas. Example: 0400-1230, 1500-2100', 'auto-post-scheduler' );?>
+                <br /><?php _e('If left blank, all times for that day are allowed for auto post checks.', 'auto-post-scheduler' );?>
+        </td></tr>
+
+        <tr valign="top"><td width="25%" align="right">
+                <strong><?php _e('Exclude Certain Dates', 'auto-post-scheduler' );?></strong>
+        </td><td align="left">
+                <input name="aps_excludes" type="text" size="60" value="<?php echo htmlspecialchars(get_option('aps_excludes')); ?>"/>
+                <br /><?php _e('Separate exclusion dates with commas. Recognized formats: d-m-Y, d-m, M, d. <br/>Examples: 25-12-2015 (Dec 25th of 2015), 25-12 (every Dec 25th), Dec (all of December), and 25 (25th of every month).', 'auto-post-scheduler' );?>
         </td></tr>
 
         <tr valign="top"><td width="25%" align="right">
@@ -350,6 +382,13 @@ function aps_options_page() {
                 <br /><?php _e('The number of eligible posts to publish OR number of published posts to recycle as new at each auto post check', 'auto-post-scheduler' );?>
         </td></tr>
 
+        <tr valign="top"><td width="25%" align="right">
+                <strong><?php _e('Max Posts per Day', 'auto-post-scheduler' );?></strong>
+        </td><td align="left">
+                <input name="aps_max_per_day" type="text" size="10" value="<?php echo htmlspecialchars(get_option('aps_max_per_day')); ?>"/>
+                <br /><?php _e('The maximum number of posts APS will publish or recycle each day. Enter 0 for no limit.', 'auto-post-scheduler' );?>
+        </td></tr>
+
 
         <tr valign="top"><td width="25%" align="right">
                 <strong><?php _e('Log File', 'auto-post-scheduler' );?></strong>
@@ -361,7 +400,7 @@ function aps_options_page() {
         <tr valign="top"><td width="25%" align="right">
                 <strong><?php _e('Debug Mode?', 'auto-post-scheduler' );?></strong>
         </td><td align="left">
-                <input type="checkbox" name="aps_debug" value="checkbox" <?php if (get_option('aps_debug')) echo "checked='checked'"; ?>/> <?php _e('Will display debug information to the log file.', 'auto-post-scheduler' );?> 
+                <input type="checkbox" name="aps_debug" value="checkbox" <?php if (get_option('aps_debug')) echo "checked='checked'"; ?>/> <?php _e('Will display extra debug information to the log file.', 'auto-post-scheduler' );?> 
         </td></tr>
 
         </table>
@@ -435,11 +474,43 @@ add_filter('cron_schedules', 'aps_set_next_schedule', 99);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function aps_time_check() { // check if there are day/hour limits
+	$aps_debug = get_option('aps_debug');
+
+	$aps_excludes = get_option('aps_excludes');
+	if (!empty($aps_excludes)) {
+		$unique_date = date("d-m-Y");
+		$yearly_date = date("d-m");
+		$month = date("M");
+		$day = date("d");
+		$exclude_dates = explode(",",$aps_excludes);
+		$date = 0;
+		foreach($exclude_dates as $ed) {
+			if ($ed == $unique_date) {
+				$s = 'date'; $date = $unique_date;
+			}
+			else if ($ed == $yearly_date) {
+				$s = 'date'; $date = $yearly_date;
+			}
+			else if ($ed == $month) {
+				$s = 'month'; $date = $month;
+			}
+			else if ($ed == $day) {
+				$s = 'day'; $date = $day;
+			}
+			if ( $date ) {
+				if ($aps_debug) aps_write_log( sprintf( __("DEBUG: today matches excluded %s %s, no post check will occur.", 'auto-post-scheduler'), $s, $date ) );
+				return 0;
+			}
+		}
+	}
+
 	$today = strtolower(date("D",current_time("timestamp")));
 	$aps_hours = get_option('aps_hours_' . $today);
 
-	if ($aps_hours == '0')	// 0 = no posts for this day
+	if ($aps_hours == '0') { // 0 = no posts for this day
+		if ($aps_debug) aps_write_log( sprintf( __("DEBUG: 0 found for %s, no post check will occur.", 'auto-post-scheduler'), $today) );
 		return 0;
+	}
 	if (!empty($aps_hours)) {
 		$time = date("Hi",current_time("timestamp"));
 		$ranges = explode(",",$aps_hours);
@@ -447,8 +518,11 @@ function aps_time_check() { // check if there are day/hour limits
 			$hours = explode("-",$range);
 			if (count($hours) != 2)
 				aps_write_log( sprintf (__("Error: %s time range of %s not recognized.", 'auto-post-scheduler' ), $today, $range ) );
-			if ($hours[0] <= $time && $time <= $hours[1]) return 1;
+			if ($hours[0] <= $time && $time <= $hours[1]) {
+				return 1;
+			}
 		}
+		if ($aps_debug) aps_write_log( sprintf( __("DEBUG: current time %s is not in allowed time range for $s (%s - %s), no post check will occur.", 'auto-post-scheduler'), $time, $today, $hours[0], $hours[1]) );
 		return 0;
 	}
 return 1;
@@ -475,6 +549,18 @@ function aps_auto_post() {
 	$aps_debug = get_option('aps_debug');
 
 	if (!aps_time_check()) return;
+
+	$aps_max_per_day = get_option('aps_max_per_day');
+	$aps_num_day = explode(",", get_option('aps_num_day')); # example: 4,2 = today the 4th of the month, 2 posts already published today
+	$today = date('d',current_time("timestamp",1));
+	if ($aps_num_day[0] && $aps_num_day[0] != $today) # if new day, reset num
+		$day_num = 0;
+	else
+		$day_num = isset($aps_num_day[1]) ? $aps_num_day[1] : 0;
+	if ($aps_max_per_day && $day_num >= $aps_max_per_day) {
+		if ($aps_debug) aps_write_log( sprintf( __("DEBUG: Reached maximum number of published/recycled posts (%s) for today (%s), no post check will occur.", 'auto-post-scheduler'), $aps_max_per_day, $today) );
+		return;
+	}
 
 	// set up the basic post query
 	$post_types = explode(',', $aps_post_types);
@@ -505,12 +591,14 @@ function aps_auto_post() {
 	$args['order'] = "ASC";
        	if ($aps_random == TRUE) $args['orderby'] = "rand";
 
-	if ($aps_debug) aps_write_log('DEBUG: 1st WP_Query( ' . print_r($args,true) . ')');
+	$args = apply_filters('aps_eligible_query', $args);
+	if ($aps_debug) aps_write_log( sprintf( __("DEBUG: eligible posts WP_Query %s", 'auto-post-scheduler'), print_r($args,true) ) );
 	$results = new WP_Query($args);
-	if ($aps_debug) aps_write_log('DEBUG: found ' . $results->post_count . ' results.');
+	if ($aps_debug) aps_write_log( sprintf( __("DEBUG: found %s results.", 'auto-post-scheduler'), $results->post_count ) );
 
 	// if no eligible post types checked or no results, check if we should recycle posts instead
 	if (!$results->have_posts() && $aps_recycle == TRUE) {	
+		if ($aps_debug) aps_write_log( __('DEBUG: no eligible posts, entering Recycle Posts Mode.', 'auto-post-scheduler') );
 		// Here we CAN use date_query because we're only checking for published posts
 		if ($aps_recycle_min) {
 			$before = $aps_recycle_min . ' ' . $aps_recycle_min_time . ' ago';
@@ -521,9 +609,10 @@ function aps_auto_post() {
 		$args['post_status'] = "publish";
 		$args['orderby'] = "post_date";
 		$args['order'] = "ASC";
-		if ($aps_debug) aps_write_log('DEBUG: 2nd WP_Query( ' . print_r($args,true) . ')');
+		$args = apply_filters('aps_recycle_query', $args);
+		if ($aps_debug) aps_write_log( sprintf( __("DEBUG: recycle posts WP_Query %s", 'auto-post-scheduler'), print_r($args,true) ) );
 		$results = new WP_Query($args);
-		if ($aps_debug) aps_write_log('DEBUG: found ' . $results->post_count . ' results.');
+		if ($aps_debug) aps_write_log( sprintf( __("DEBUG: found %s results.", 'auto-post-scheduler'), $results->post_count ) );
 	}
 
 	if ($results->have_posts()) {
@@ -540,7 +629,7 @@ function aps_auto_post() {
 		}
 		while ($results->have_posts() && $cnt < $aps_batch) {
 			$results->the_post();
-			if ($aps_debug) aps_write_log('DEBUG: processing ' . print_r(get_post(),true) . '');
+			if ($aps_debug) aps_write_log( sprintf( __("DEBUG: processing post %s", 'auto-post-scheduler'), get_the_title() ) );
 			$id = get_the_ID();
 			$status = get_post_status($id);
 			$title = get_the_title($id);
@@ -550,6 +639,7 @@ function aps_auto_post() {
 				$post_date = strtotime($post_date);
 				$diff = $now_date - $post_date;
 				if ($diff <= $min_age) { // this post not aged enough to recycle
+					if ($aps_debug) aps_write_log( __('DEBUG: this post has not aged enough to recycle.', 'auto-post-scheduler') );
 					continue;
 				}
 			}
@@ -560,11 +650,18 @@ function aps_auto_post() {
 			$update['post_status'] = 'publish';
 			$update['post_date_gmt'] = date('Y-m-d H:i:s',current_time("timestamp",1));
 			$update['post_date'] = get_date_from_gmt($update['post_date_gmt']);
-			if ($aps_debug) aps_write_log('DEBUG: wp_update_post(' . print_r($update,true) . ')');
+			if ($status == "publish")
+				$update = apply_filters('aps_recycle_post', $update);
+			else
+				$update = apply_filters('aps_update_post', $update);
+			if ($aps_debug) aps_write_log( sprintf( __("DEBUG: wp_update_post %s", 'auto-post-scheduler'), print_r($update,true) ) );
+        		update_option('aps_updating', TRUE);
 			kses_remove_filters();
 			wp_update_post($update);
 			kses_init_filters();
+        		update_option('aps_updating', FALSE);
 			$cnt++;
+			$day_num++;
 
 			if ($status == "publish")
 				$str = sprintf (__("POST id %d RECYCLED: '%s'", 'auto-post-scheduler' ), $id, $title );
@@ -574,6 +671,10 @@ function aps_auto_post() {
 		}
 		if ($cnt < $aps_batch) // only happens for special case check
 			aps_write_log( __("Unable to find eligible posts to publish/recycle.", 'auto-post-scheduler' ) );
+		else { // update aps_num_day
+			$aps_num_day = date('d') . "," . $day_num;
+        		update_option('aps_num_day', $aps_num_day);
+		}
 	}
 	else {
 		aps_write_log( __("Unable to find eligible posts to publish.", 'auto-post-scheduler' ) );
@@ -619,6 +720,17 @@ function aps_plugin_action_links($links, $file) {
     }
 
     return $links;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+add_action( 'publish_post', 'check_for_restart', 10, 2 );
+
+function check_for_restart() {
+	if (get_option('aps_restart') == FALSE) return;
+	if (get_option('aps_updating') == TRUE) return;
+	$str = aps_restart_event();
+	aps_write_log( $str );
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
