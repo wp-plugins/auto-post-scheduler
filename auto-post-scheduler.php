@@ -3,8 +3,8 @@
  * Plugin Name: Auto Post Scheduler
  * Plugin URI: http://www.superblogme.com/auto-post-scheduler/
  * Description: Publishes posts or recycles old posts at specified time intervals automatically.
- * Version: 1.63
- * Released: March 14th, 2015
+ * Version: 1.64
+ * Released: TBD
  * Author: Super Blog Me
  * Author URI: http://www.superblogme.com
  * License: GPL2
@@ -12,7 +12,7 @@
  * Domain Path: /lang
  **/
 
-define('AUTOPOSTSCHEDULER_VERSION', '1.63');
+define('AUTOPOSTSCHEDULER_VERSION', '1.64');
 
 defined('ABSPATH') or die ("Oops! This is a WordPress plugin and should not be called directly.\n");
 
@@ -85,26 +85,27 @@ function aps_deactivation() {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function aps_restart_event() {
+function aps_schedule_event( $restart = 0 ) {
 	wp_clear_scheduled_hook('aps_auto_post_hook');
-	$timesecs = aps_time_seconds(get_option('aps_next'),get_option('aps_next_time'));
-	if ( wp_schedule_event( time() + $timesecs, 'aps_schedule', 'aps_auto_post_hook' ) !== FALSE )
-		$str = __("Post published outside of APS - Auto Post Scheduler restarted", 'auto-post-scheduler' );
+	if ( $restart )
+		$timesecs = aps_time_seconds(get_option('aps_next'),get_option('aps_next_time'));
 	else
-		$str = __("Error with wp_schedule_event for aps_auto_post_hook!!", 'auto-post-scheduler' );
-	return $str;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-function aps_schedule_event() {
-	wp_clear_scheduled_hook('aps_auto_post_hook');
-	$timesecs = aps_time_seconds(get_option('aps_start_delay'),get_option('aps_delay_time'));
-	if ( wp_schedule_event( time() + $timesecs, 'aps_schedule', 'aps_auto_post_hook' ) !== FALSE )
-		$str = __("Auto Post Scheduler Enabled!", 'auto-post-scheduler' );
+		$timesecs = aps_time_seconds(get_option('aps_start_delay'),get_option('aps_delay_time'));
+	if ( wp_schedule_event( time() + $timesecs, 'aps_schedule', 'aps_auto_post_hook' ) !== FALSE ) {
+		if ( $restart )
+			$str = __("Post published outside of APS - Auto Post Scheduler restarted", 'auto-post-scheduler' );
+		else
+			$str = __("Auto Post Scheduler Enabled!", 'auto-post-scheduler' );
+	}
 	else
 		$str = __("Error with wp_schedule_event for aps_auto_post_hook!", 'auto-post-scheduler' );
-	return $str;
+	echo "<br />" . $str;
+	aps_write_log( $str );
+	if ( FALSE !== get_option('aps_debug')) {
+		$scheduledtime = wp_next_scheduled('aps_auto_post_hook');
+		$formatscheduledtime = date("Y-m-d H:i:s", $scheduledtime + (get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) . " " . get_option('timezone_string');
+		aps_write_log( sprintf( __("DEBUG: First wp_next_scheduled for %s.", 'auto-post-scheduler'), $formatscheduledtime ) );
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,10 +123,8 @@ function aps_options_page() {
 
                 update_option('aps_enabled', TRUE);
 		$str = aps_schedule_event();
-                echo $str;
-		aps_write_log( $str );
 
-            ?></strong></p></div><?php
+		?></strong></p></div><?php
 
         } else if (isset($_POST['disable_auto_post_scheduler'])) {
 
@@ -225,14 +224,13 @@ function aps_options_page() {
                 echo date('Y-m-d H:i:s',current_time("timestamp")) . " " . get_option('timezone_string');
                 $scheduledtime = wp_next_scheduled('aps_auto_post_hook');
 		if ($scheduledtime) {
-                	$formatscheduledtime = date("Y-m-d H:i:s", $scheduledtime + (get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ));
+                	$formatscheduledtime = date("Y-m-d H:i:s", $scheduledtime + (get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) . " " . get_option('timezone_string');
                 	echo "<br /><div class='aps-schedule'>" . __('Next auto post check:', 'auto-post-scheduler' ) . "</div>";
-                	echo $formatscheduledtime . " " . get_option('timezone_string');
+                	echo $formatscheduledtime;
 		}
 		else {
 			echo "<br />" . __("Error: aps_auto_post_hook not scheduled, likely another plugin misuse of cron_schedules. See FAQ. (Trying to reset...)", 'auto-post-scheduler' );
-			$str = aps_schedule_event();
-			echo "<br />" . $str;
+			aps_schedule_event();
 		}
                 echo "<br/>";
         ?>
@@ -535,6 +533,9 @@ function aps_auto_post() {
 
 	$aps_enabled = (bool)get_option('aps_enabled');
 	if ($aps_enabled == FALSE) return;
+	if (!aps_time_check()) return;
+
+	if ($aps_debug) aps_write_log( sprintf( __("DEBUG: aps_auto_post_hook triggered, looking for eligible posts...", 'auto-post-scheduler') ) );
 
 	$aps_drafts = (bool)get_option('aps_drafts');
 	$aps_pending = (bool)get_option('aps_pending');
@@ -548,8 +549,6 @@ function aps_auto_post() {
 	$aps_post_types = get_option('aps_post_types');
 	$aps_debug = get_option('aps_debug');
 
-	if (!aps_time_check()) return;
-
 	$aps_max_per_day = get_option('aps_max_per_day');
 	$aps_num_day = explode(",", get_option('aps_num_day')); # example: 4,2 = today the 4th of the month, 2 posts already published today
 	$today = date('d',current_time("timestamp",1));
@@ -561,6 +560,9 @@ function aps_auto_post() {
 		if ($aps_debug) aps_write_log( sprintf( __("DEBUG: Reached maximum number of published/recycled posts (%s) for today (%s), no post check will occur.", 'auto-post-scheduler'), $aps_max_per_day, $today) );
 		return;
 	}
+
+       	if ( FALSE === update_option( 'aps_updating', TRUE ) && $aps_debug )
+		aps_write_log( sprintf( __("DEBUG: Unable to update_option 'aps_updating' to TRUE!!!", 'auto-post-scheduler') ) );
 
 	// set up the basic post query
 	$post_types = explode(',', $aps_post_types);
@@ -655,19 +657,22 @@ function aps_auto_post() {
 			else
 				$update = apply_filters('aps_update_post', $update);
 			if ($aps_debug) aps_write_log( sprintf( __("DEBUG: wp_update_post %s", 'auto-post-scheduler'), print_r($update,true) ) );
-        		update_option('aps_updating', TRUE);
 			kses_remove_filters();
-			wp_update_post($update);
+			$return = wp_update_post($update, true);
 			kses_init_filters();
-        		update_option('aps_updating', FALSE);
-			$cnt++;
-			$day_num++;
+
+			if ( is_wp_error( $return ) ) {
+				aps_write_log( sprintf( __("ERROR: wp_update_post returned %s", 'auto-post-scheduler'), $return->get_error_message() ) );
+				continue;
+			}
 
 			if ($status == "publish")
 				$str = sprintf (__("POST id %d RECYCLED: '%s'", 'auto-post-scheduler' ), $id, $title );
 			else
 				$str = sprintf (__("%s POST id %d PUBLISHED : '%s'", 'auto-post-scheduler' ), $status, $id, $title );
 			aps_write_log( $str );
+			$cnt++;
+			$day_num++;
 		}
 		if ($cnt < $aps_batch) // only happens for special case check
 			aps_write_log( __("Unable to find eligible posts to publish/recycle.", 'auto-post-scheduler' ) );
@@ -679,7 +684,14 @@ function aps_auto_post() {
 	else {
 		aps_write_log( __("Unable to find eligible posts to publish.", 'auto-post-scheduler' ) );
 	}
+       	if ( FALSE === update_option( 'aps_updating', FALSE ) && $aps_debug )
+		aps_write_log( sprintf( __("DEBUG: Unable to update_option 'aps_updating' to FALSE!!!", 'auto-post-scheduler') ) );
 
+	if ( $aps_debug ) {
+		$scheduledtime = wp_next_scheduled('aps_auto_post_hook');
+		$formatscheduledtime = date("Y-m-d H:i:s", $scheduledtime + (get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) . " " . get_option('timezone_string');
+		aps_write_log( sprintf( __("DEBUG: wp_next_scheduled for %s.", 'auto-post-scheduler'), $formatscheduledtime ) );
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -729,8 +741,7 @@ add_action( 'publish_post', 'check_for_restart', 10, 2 );
 function check_for_restart() {
 	if (get_option('aps_restart') == FALSE) return;
 	if (get_option('aps_updating') == TRUE) return;
-	$str = aps_restart_event();
-	aps_write_log( $str );
+	aps_schedule_event(1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

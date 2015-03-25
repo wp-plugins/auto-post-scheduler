@@ -146,6 +146,13 @@ drafts, publish    yes             yes             drafts and published posts ar
 
 == Changelog ==
 
+= 1.64 =
+
+* Combined aps_restart_event and aps_schedule_event.
+* Added more DEBUG messages.
+* Added check for wp_update_post error from WordPress.
+* Expanded aps_updating toggle range, added update_option fail check.
+
 = 1.63 =
 
 * Added filters for the queries and the updates (see FAQ). Requested by [policieuxjp](https://wordpress.org/support/topic/feature-request-duplicate-instead-of-republish)
