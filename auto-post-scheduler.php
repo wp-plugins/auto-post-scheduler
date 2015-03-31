@@ -535,6 +535,8 @@ function aps_auto_post() {
 	if ($aps_enabled == FALSE) return;
 	if (!aps_time_check()) return;
 
+	$aps_debug = get_option('aps_debug');
+
 	if ($aps_debug) aps_write_log( sprintf( __("DEBUG: aps_auto_post_hook triggered, looking for eligible posts...", 'auto-post-scheduler') ) );
 
 	$aps_drafts = (bool)get_option('aps_drafts');
@@ -547,7 +549,6 @@ function aps_auto_post() {
 	$aps_recycle_min = (int)get_option('aps_recycle_min');
 	$aps_recycle_min_time = get_option('aps_recycle_min_time');
 	$aps_post_types = get_option('aps_post_types');
-	$aps_debug = get_option('aps_debug');
 
 	$aps_max_per_day = get_option('aps_max_per_day');
 	$aps_num_day = explode(",", get_option('aps_num_day')); # example: 4,2 = today the 4th of the month, 2 posts already published today
